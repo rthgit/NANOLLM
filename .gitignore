@@ -1,0 +1,10 @@
+﻿# launch repo ignore
+archive/
+*.pt
+*.safetensors
+kaggle_resume_job_bundle_*.zip
+phase2_*.zip
+phase2_*.pt
+*__pycache__/
+.env
+.env.*

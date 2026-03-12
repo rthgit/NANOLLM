@@ -1,0 +1,74 @@
+﻿{
+    "generated_at":  "2026-03-12 11:26:40",
+    "root_path":  "E:\\testmob",
+    "kept_items":  [
+                       {
+                           "Name":  "archive",
+                           "Mode":  "d-----",
+                           "Length":  null,
+                           "LastWriteTime":  "\/Date(1773195903670)\/"
+                       },
+                       {
+                           "Name":  "TASKS.md",
+                           "Mode":  "-a----",
+                           "Length":  4761,
+                           "LastWriteTime":  "\/Date(1773310792000)\/"
+                       },
+                       {
+                           "Name":  "RUN_DECISIONS.md",
+                           "Mode":  "-a----",
+                           "Length":  3738,
+                           "LastWriteTime":  "\/Date(1773310790000)\/"
+                       },
+                       {
+                           "Name":  "README.md",
+                           "Mode":  "-a----",
+                           "Length":  1246,
+                           "LastWriteTime":  "\/Date(1773203410000)\/"
+                       },
+                       {
+                           "Name":  "PAPER_NANOLLM.md",
+                           "Mode":  "-a----",
+                           "Length":  15792,
+                           "LastWriteTime":  "\/Date(1773311048000)\/"
+                       },
+                       {
+                           "Name":  "KAGGLE_V13C_QNANOLORA_MERGE_CLEAN_CELL.md",
+                           "Mode":  "-a----",
+                           "Length":  20629,
+                           "LastWriteTime":  "\/Date(1773305822000)\/"
+                       },
+                       {
+                           "Name":  "production_candidate_v13c_qnanolora_20260312_094722_UTC.zip",
+                           "Mode":  "-a----",
+                           "Length":  131820097,
+                           "LastWriteTime":  "\/Date(1773308876000)\/"
+                       },
+                       {
+                           "Name":  "REPRO_CHANGELOG_20260312_V13C_QNANOLORA.md",
+                           "Mode":  "-a----",
+                           "Length":  3060,
+                           "LastWriteTime":  "\/Date(1773309058000)\/"
+                       },
+                       {
+                           "Name":  "KAGGLE_COMPRESSION_METHODS_BENCHMARK_CELL.md",
+                           "Mode":  "-a----",
+                           "Length":  23807,
+                           "LastWriteTime":  "\/Date(1773310054000)\/"
+                       }
+                   ],
+    "moved_count":  53,
+    "moved_log":  "E:\\testmob\\archive\\2026-03-12_launch_cleanup\\MOVE_LOG_root_cleanup.json",
+    "archive_root":  "E:\\testmob\\archive\\2026-03-12_launch_cleanup\\root_archive",
+    "launch_candidate_zip":  "production_candidate_v13c_qnanolora_20260312_094722_UTC.zip",
+    "key_docs":  [
+                     "PAPER_NANOLLM.md",
+                     "RUN_DECISIONS.md",
+                     "TASKS.md",
+                     "REPRO_CHANGELOG_20260312_V13C_QNANOLORA.md"
+                 ],
+    "key_cells":  [
+                      "KAGGLE_V13C_QNANOLORA_MERGE_CLEAN_CELL.md",
+                      "KAGGLE_COMPRESSION_METHODS_BENCHMARK_CELL.md"
+                  ]
+}
