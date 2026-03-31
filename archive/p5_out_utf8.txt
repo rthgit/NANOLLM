@@ -1,0 +1,148 @@
+﻿
+================================================================================
+  TEST 1: Expert Count Scaling (top-4, input=64, expert=32, 200 tokens)
+================================================================================
+
+  N_experts=8
+        NanoLink: quality=0.6922  route_acc=0.4575  total_cost=1218  mem_saved=50.0%
+         DotProd: quality=0.6855  route_acc=0.5075  total_cost=1218  mem_saved=50.0%
+     LearnedGate: quality=0.6876  route_acc=0.5138  total_cost=1218  mem_saved=50.0%
+      HashRouter: quality=0.6841  route_acc=0.4600  total_cost=1210  mem_saved=50.0%
+          Random: quality=0.7021  route_acc=0.4900  total_cost=1201  mem_saved=50.0%
+            Full: quality=1.0000  route_acc=1.0000  total_cost=2400  mem_saved=0.0%
+
+  N_experts=16
+        NanoLink: quality=0.4996  route_acc=0.2725  total_cost=1235  mem_saved=75.0%
+         DotProd: quality=0.4429  route_acc=0.2475  total_cost=1235  mem_saved=75.0%
+     LearnedGate: quality=0.4614  route_acc=0.2512  total_cost=1235  mem_saved=75.0%
+      HashRouter: quality=0.4693  route_acc=0.2250  total_cost=1211  mem_saved=75.0%
+          Random: quality=0.4922  route_acc=0.2537  total_cost=1201  mem_saved=75.0%
+            Full: quality=1.0000  route_acc=1.0000  total_cost=4800  mem_saved=0.0%
+
+  N_experts=32
+        NanoLink: quality=0.3304  route_acc=0.1288  total_cost=1270  mem_saved=87.5%
+         DotProd: quality=0.3055  route_acc=0.1425  total_cost=1270  mem_saved=87.5%
+     LearnedGate: quality=0.3104  route_acc=0.1375  total_cost=1270  mem_saved=87.5%
+      HashRouter: quality=0.3081  route_acc=0.1037  total_cost=1214  mem_saved=87.5%
+          Random: quality=0.3271  route_acc=0.1163  total_cost=1201  mem_saved=87.5%
+            Full: quality=1.0000  route_acc=1.0000  total_cost=9600  mem_saved=0.0%
+
+  N_experts=64
+        NanoLink: quality=0.2402  route_acc=0.0650  total_cost=1341  mem_saved=93.8%
+         DotProd: quality=0.1878  route_acc=0.0650  total_cost=1341  mem_saved=93.8%
+     LearnedGate: quality=0.1880  route_acc=0.0638  total_cost=1341  mem_saved=93.8%
+      HashRouter: quality=0.2054  route_acc=0.0425  total_cost=1218  mem_saved=93.8%
+          Random: quality=0.2422  route_acc=0.0575  total_cost=1201  mem_saved=93.8%
+            Full: quality=1.0000  route_acc=1.0000  total_cost=19200  mem_saved=0.0%
+
+  N_experts=128
+        NanoLink: quality=0.1800  route_acc=0.0225  total_cost=1482  mem_saved=96.9%
+         DotProd: quality=0.1362  route_acc=0.0375  total_cost=1482  mem_saved=96.9%
+     LearnedGate: quality=0.1482  route_acc=0.0288  total_cost=1482  mem_saved=96.9%
+      HashRouter: quality=0.1070  route_acc=0.0125  total_cost=1223  mem_saved=96.9%
+          Random: quality=0.1647  route_acc=0.0250  total_cost=1201  mem_saved=96.9%
+            Full: quality=1.0000  route_acc=1.0000  total_cost=38400  mem_saved=0.0%
+
+  N_experts=256
+        NanoLink: quality=0.1036  route_acc=0.0125  total_cost=1763  mem_saved=98.4%
+         DotProd: quality=0.0881  route_acc=0.0150  total_cost=1763  mem_saved=98.4%
+     LearnedGate: quality=0.0758  route_acc=0.0125  total_cost=1763  mem_saved=98.4%
+      HashRouter: quality=0.0784  route_acc=0.0075  total_cost=1224  mem_saved=98.4%
+          Random: quality=0.1253  route_acc=0.0125  total_cost=1201  mem_saved=98.4%
+            Full: quality=1.0000  route_acc=1.0000  total_cost=76800  mem_saved=0.0%
+
+================================================================================
+  TEST 2: Sparsity Level (64 experts, input=64, expert=32, 200 tokens)
+================================================================================
+
+  k=1 (top-1 of 64)
+        NanoLink: quality=0.1076  route_acc=0.0150  mem_saved=98.4%
+         DotProd: quality=0.1002  route_acc=0.0200  mem_saved=98.4%
+     LearnedGate: quality=0.0967  route_acc=0.0200  mem_saved=98.4%
+      HashRouter: quality=0.1189  route_acc=0.0000  mem_saved=98.4%
+          Random: quality=0.1280  route_acc=0.0100  mem_saved=98.4%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+  k=2 (top-2 of 64)
+        NanoLink: quality=0.1633  route_acc=0.0225  mem_saved=96.9%
+         DotProd: quality=0.1337  route_acc=0.0275  mem_saved=96.9%
+     LearnedGate: quality=0.1366  route_acc=0.0350  mem_saved=96.9%
+      HashRouter: quality=0.1631  route_acc=0.0175  mem_saved=96.9%
+          Random: quality=0.1684  route_acc=0.0300  mem_saved=96.9%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+  k=4 (top-4 of 64)
+        NanoLink: quality=0.2402  route_acc=0.0650  mem_saved=93.8%
+         DotProd: quality=0.1878  route_acc=0.0650  mem_saved=93.8%
+     LearnedGate: quality=0.1880  route_acc=0.0638  mem_saved=93.8%
+      HashRouter: quality=0.2054  route_acc=0.0425  mem_saved=93.8%
+          Random: quality=0.2422  route_acc=0.0575  mem_saved=93.8%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+  k=8 (top-8 of 64)
+        NanoLink: quality=0.3438  route_acc=0.1219  mem_saved=87.5%
+         DotProd: quality=0.2540  route_acc=0.1375  mem_saved=87.5%
+     LearnedGate: quality=0.2692  route_acc=0.1231  mem_saved=87.5%
+      HashRouter: quality=0.2942  route_acc=0.0975  mem_saved=87.5%
+          Random: quality=0.3442  route_acc=0.1256  mem_saved=87.5%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+  k=16 (top-16 of 64)
+        NanoLink: quality=0.4868  route_acc=0.2478  mem_saved=75.0%
+         DotProd: quality=0.3549  route_acc=0.2447  mem_saved=75.0%
+     LearnedGate: quality=0.3786  route_acc=0.2444  mem_saved=75.0%
+      HashRouter: quality=0.3969  route_acc=0.1894  mem_saved=75.0%
+          Random: quality=0.4805  route_acc=0.2459  mem_saved=75.0%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+  k=32 (top-32 of 64)
+        NanoLink: quality=0.7015  route_acc=0.4986  mem_saved=50.0%
+         DotProd: quality=0.5319  route_acc=0.4875  mem_saved=50.0%
+     LearnedGate: quality=0.5634  route_acc=0.4922  mem_saved=50.0%
+      HashRouter: quality=0.5714  route_acc=0.3894  mem_saved=50.0%
+          Random: quality=0.6928  route_acc=0.4983  mem_saved=50.0%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+  k=64 (top-64 of 64)
+        NanoLink: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+         DotProd: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+     LearnedGate: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+      HashRouter: quality=0.8025  route_acc=0.7691  mem_saved=0.0%
+          Random: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+            Full: quality=1.0000  route_acc=1.0000  mem_saved=0.0%
+
+================================================================================
+  TEST 4: Efficiency Frontier (64 experts, input=64)
+================================================================================
+
+====================================================================================================
+                                  PHASE 5 ù NEURAL ROUTING RESULTS                                  
+====================================================================================================
+
+  AT 256 EXPERTS (top-4):
+        NanoLink: quality=0.1036  cost=1763  mem_saved=98.4%
+         DotProd: quality=0.0881  cost=1763  mem_saved=98.4%
+     LearnedGate: quality=0.0758  cost=1763  mem_saved=98.4%
+      HashRouter: quality=0.0784  cost=1224  mem_saved=98.4%
+          Random: quality=0.1253  cost=1201  mem_saved=98.4%
+            Full: quality=1.0000  cost=76800
+
+  NANOLINK vs DOTPROD GAP (across expert counts):
+    N=8   : NL=0.6922  DP=0.6855  diff=+0.0067
+    N=16  : NL=0.4996  DP=0.4429  diff=+0.0567
+    N=32  : NL=0.3304  DP=0.3055  diff=+0.0249
+    N=64  : NL=0.2402  DP=0.1878  diff=+0.0525
+    N=128 : NL=0.1800  DP=0.1362  diff=+0.0438
+    N=256 : NL=0.1036  DP=0.0881  diff=+0.0155
+
+  SPARSITY SWEEP (quality at different k):
+    k=1    NL=0.1076  DP=0.1002  Gate=0.0967  mem_saved=98%
+    k=2    NL=0.1633  DP=0.1337  Gate=0.1366  mem_saved=97%
+    k=4    NL=0.2402  DP=0.1878  Gate=0.1880  mem_saved=94%
+    k=8    NL=0.3438  DP=0.2540  Gate=0.2692  mem_saved=88%
+    k=16   NL=0.4868  DP=0.3549  Gate=0.3786  mem_saved=75%
+    k=32   NL=0.7015  DP=0.5319  Gate=0.5634  mem_saved=50%
+    k=64   NL=1.0000  DP=1.0000  Gate=1.0000  mem_saved=0%
+
+====================================================================================================
+
