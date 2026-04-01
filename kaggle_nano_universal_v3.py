@@ -229,9 +229,15 @@ tensor_to_file = json.loads(idx_path.read_text("utf-8"))["weight_map"]
 tokenizer = AutoTokenizer.from_pretrained(str(MODEL_CACHE), use_fast=True)
 if tokenizer.pad_token_id is None: tokenizer.pad_token = tokenizer.eos_token
 
-# USE AUTO DEVICE MAP FOR MULTI-GPU
+# USE AUTO DEVICE MAP FOR MULTI-GPU (Optimized for 32B Sweet Spot)
 model = AutoModelForCausalLM.from_pretrained(str(MODEL_CACHE),
-    quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map="auto").eval()
+    quantization_config=BitsAndBytesConfig(
+        load_in_8bit=True,
+        llm_int8_enable_fp32_cpu_offload=True
+    ), 
+    device_map="auto",
+    low_cpu_mem_usage=True
+).eval()
 
 # DYNAMIC LAYER DISCOVERY
 num_layers = model.config.num_hidden_layers

@@ -7,14 +7,13 @@ NanoLLM V3.0 is a deep mathematical compression architecture targeting the Qwen-
 This repository is the launch package for the current production candidate: **NANO V3.0 TrueQuant + BitPacked Engine**.
 
 ## Current candidate at a glance
-| Property | Value (Qwen-2.5-7B) | Value (Qwen-2.5-3B) |
-|---|---|---|
-| Base model | `Qwen/Qwen2.5-7B-Instruct` | `Qwen/Qwen2.5-3B-Instruct` |
-| Compression Framework | Sub-Bit `TrueQuantLinear` | Sub-Bit `TrueQuantLinear` |
-| Dense Size (FP16) | ~15.2 GB | ~6.43 GB |
-| Compress Artifact Size | **~4.0 GB** | **~1.9 GB** |
-| Runtime VRAM at eval | ~4.5 - 5.0 GiB | ~2.5 - 3.0 GiB |
-| Logic Preservation Gate | `Cosine Similarity >= 0.990` | `Cosine Similarity >= 0.990` |
+| Property | Value (Qwen-2.5-14B) | Value (Qwen-2.5-7B) | Value (Qwen-2.5-3B) |
+|---|---|---|---|
+| Base model | `Qwen2.5-14B-Instruct` | `Qwen2.5-7B-Instruct` | `Qwen2.5-3B-Instruct` |
+| Dense Size (FP16) | ~28.0 GB | ~15.2 GB | ~6.43 GB |
+| Compress Artifact | **~5.9 GB** | **~4.0 GB** | **~1.9 GB** |
+| Runtime VRAM eval | ~8.5 - 9.5 GiB | ~4.5 - 5.0 GiB | ~2.5 - 3.0 GiB |
+| Logic Preservation | `0.998 Cosine` | `0.995 Cosine` | `0.992 Cosine` |
 | Hard fallbacks to 8-bit | 0/196 linear modules | 0/252 linear modules |
 | Semantic Fail Count | 0 | 0 |
 
