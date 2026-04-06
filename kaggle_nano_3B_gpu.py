@@ -1,5 +1,5 @@
 # ============================================================
-# NANO 3B CASCADE RUNNER v3.0 — REASONING-SAFE + BIT PACKING
+# NANO 3B CASCADE RUNNER v3.1 - STABILIZED + BIT PACKING
 # ============================================================
 import gc
 import json
@@ -13,8 +13,17 @@ from typing import Any, Dict, List, Tuple
 
 # ===== CONFIG =====
 MODEL_ID    = os.getenv("MODEL_ID", "Qwen/Qwen2.5-3B-Instruct")
-HF_TOKEN    = os.getenv("HF_TOKEN", "")
-FORCE_CLEAN = True
+HF_TOKEN    = (
+    os.getenv("HF_TOKEN")
+    or os.getenv("HUGGINGFACE_HUB_TOKEN")
+    or os.getenv("HUGGING_FACE_HUB_TOKEN")
+    or ""
+).strip()
+FORCE_CLEAN = os.getenv("NANO_FORCE_CLEAN", "1").strip().lower() in {"1", "true", "yes", "on"}
+USE_4BIT_BASELINE = os.getenv("NANO_BASELINE_4BIT", "1").strip().lower() in {"1", "true", "yes", "on"}
+
+if HF_TOKEN and not os.getenv("HF_TOKEN"):
+    os.environ["HF_TOKEN"] = HF_TOKEN
 
 # Qwen 3B ha 36 layer (da 0 a 35)
 LAYER_START = 0
@@ -31,7 +40,6 @@ TRIAL_PLAN: List[Tuple[int, int]] = [
     (2,  512), (2, 1024), (2, 2048), (2, 4096), (2, 8192),
     (4,  512), (4, 1024), (4, 2048), (4, 4096), (4, 8192),
     (6,  512), (6, 1024), (6, 2048), (6, 4096), (6, 8192),
-    (8, 0),      # fallback
 ]
 
 # Prompt difficili per salvaguardare ragionamento e codice
@@ -57,7 +65,8 @@ LOCKS_FILE   = Path("/kaggle/working/nano_locks.json")
 
 os.environ["HF_HOME"]                   = str(HF_CACHE)
 os.environ["TRANSFORMERS_CACHE"]        = str(HF_CACHE)
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = os.getenv("NANO_HF_TRANSFER", "0")
+os.environ["HF_HUB_DISABLE_XET"] = os.getenv("NANO_HF_DISABLE_XET", "1")
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 os.environ["CUDA_VISIBLE_DEVICES"]      = "0"
 os.environ["TOKENIZERS_PARALLELISM"]    = "false"
@@ -77,6 +86,15 @@ def set_status(step, state, extra=None):
     p = {"ts_utc": int(time.time()), "step": step, "state": state, "extra": extra or {}}
     STATUS_FILE.write_text(json.dumps(p, indent=2), encoding="utf-8")
     print(f"[{time.strftime('%H:%M:%S')}] {step} -> {state}", flush=True)
+
+def clear_runtime_memory():
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        try:
+            torch.cuda.ipc_collect()
+        except Exception:
+            pass
 
 def get_module(root, name):
     cur = root
@@ -129,15 +147,15 @@ class TrueQuantLinear(nn.Module):
         o = torch.zeros(f.shape[0], self.out_features, dtype=torch.float16, device=d)
         if self.prot_q.shape[0] > 0:
             w = self.prot_q.to(torch.float16) * self.prot_scale.unsqueeze(1)
-            o.index_copy_(1, self.prot_idx, f @ w.t()); del w
+            o.index_copy_(-1, self.prot_idx, f @ w.t()); del w
         if self.deg_q.shape[0] > 0:
             w = self.deg_q.to(torch.float16) * self.deg_scale.unsqueeze(1)
-            o.index_copy_(1, self.deg_idx, f @ w.t()); del w
+            o.index_copy_(-1, self.deg_idx, f @ w.t()); del w
         if self.bias is not None: o = o + self.bias
         return o.reshape(*x.shape[:-1], self.out_features).to(dt)
 
     def export_state(self):
-        # IL VERO BIT PACKING A 800 MB!
+        # IL VERO BIT PACKING
         s = {"bits": self.bits, "out_features": self.out_features,
              "prot_q": self.prot_q.cpu(), "prot_scale": self.prot_scale.cpu(), "prot_idx": self.prot_idx.cpu(),
              "deg_scale": self.deg_scale.cpu(), "deg_idx": self.deg_idx.cpu()}
@@ -206,7 +224,8 @@ def get_logits(model, prompt, tokenizer):
 def evaluate(model, tokenizer, baseline):
     cos_sum = 0.0
     for p in PROMPTS:
-        sig, base = get_logits(model, p, tokenizer), baseline[p]
+        sig = get_logits(model, p, tokenizer)
+        base = baseline[p].to(sig.device, non_blocking=True)
         cos = torch.nn.functional.cosine_similarity(sig.flatten(), base.flatten(), dim=0).item()
         cos_sum += cos
     
@@ -220,9 +239,13 @@ if FORCE_CLEAN and ROOT.exists(): shutil.rmtree(ROOT)
 for p in [ROOT, HF_CACHE]: p.mkdir(parents=True, exist_ok=True)
 if torch.cuda.is_available(): free, total = torch.cuda.mem_get_info(0); print(f"GPU: {torch.cuda.get_device_name(0)}  VRAM: {free/1e9:.1f}/{total/1e9:.1f}GB", flush=True)
 
-if HF_TOKEN: login(token=HF_TOKEN, add_to_git_credential=False)
+if HF_TOKEN:
+    print("[HF] Authenticated download enabled.", flush=True)
+    login(token=HF_TOKEN, add_to_git_credential=False)
+else:
+    print("[HF] WARNING: missing HF token; downloads may be throttled.", flush=True)
 MODEL_CACHE.mkdir(parents=True, exist_ok=True)
-snapshot_download(repo_id=MODEL_ID, local_dir=str(MODEL_CACHE), local_dir_use_symlinks=False,
+snapshot_download(repo_id=MODEL_ID, local_dir=str(MODEL_CACHE), token=(HF_TOKEN or None),
     allow_patterns=["*.json","*.txt","*.model","tokenizer*","special_tokens_map.json",
                     "generation_config.json","model*.safetensors","model.safetensors.index.json"])
 idx_path = MODEL_CACHE / "model.safetensors.index.json"
@@ -230,12 +253,26 @@ tensor_to_file = json.loads(idx_path.read_text("utf-8"))["weight_map"]
 
 tokenizer = AutoTokenizer.from_pretrained(str(MODEL_CACHE), use_fast=True)
 if tokenizer.pad_token_id is None: tokenizer.pad_token = tokenizer.eos_token
-model = AutoModelForCausalLM.from_pretrained(str(MODEL_CACHE),
-    quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map={"": "cuda:0"}).eval()
+if USE_4BIT_BASELINE:
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+    )
+else:
+    quant_cfg = BitsAndBytesConfig(load_in_8bit=True)
+model = AutoModelForCausalLM.from_pretrained(
+    str(MODEL_CACHE),
+    quantization_config=quant_cfg,
+    device_map={"": "cuda:0"},
+).eval()
+print(f"[{MODEL_ID}] Base load mode: {'4-bit NF4' if USE_4BIT_BASELINE else '8-bit INT8'}", flush=True)
 
 set_status("baseline", "running")
-baseline = {p: get_logits(model, p, tokenizer) for p in PROMPTS}
+baseline = {p: get_logits(model, p, tokenizer).cpu() for p in PROMPTS}
 set_status("baseline", "done")
+clear_runtime_memory()
 
 targets = discover_targets(model, RUN_SUFFIXES)
 locked, exports, pending = {}, {}, list(targets)
@@ -261,14 +298,17 @@ for ti, (bits, prot) in enumerate(TRIAL_PLAN, 1):
         if ok:
             locked[mn] = {"trial":ti,"bits":bits,"keep":prot,**m}
             exports[mn] = c.export_state()
-            baseline = {p: get_logits(model, p, tokenizer) for p in PROMPTS}
+            # Keep the original reference fixed; updating it lets drift compound across locks.
+            clear_runtime_memory()
             print(f"  ✓ {m['cos']*100:.2f}%", flush=True)
         else:
             set_module(model, mn, backup)
             still.append(mn)
             print(f"  ✗ {m.get('cos',0)*100:.2f}%", flush=True)
             
-        clear_cache(mn); del backup; gc.collect(); torch.cuda.empty_cache()
+        clear_cache(mn)
+        del backup
+        clear_runtime_memory()
     pending = still
     LOCKS_FILE.write_text(json.dumps(locked, indent=2, default=str), "utf-8")
 
@@ -276,13 +316,21 @@ elapsed = time.time() - t0
 set_status("cascade", "done", {"locked":len(locked),"pending":len(pending),"sec":int(elapsed)})
 
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-spec = {"format":"nano-v3.0","base_model_id":MODEL_ID,"locked_count":len(locked),
-        "pending_8bit":len(pending),"elapsed_seconds":int(elapsed)}
+spec = {
+    "format":"nano-v3.1",
+    "base_model_id":MODEL_ID,
+    "locked_count":len(locked),
+    "pending_8bit":len(pending),
+    "elapsed_seconds":int(elapsed),
+    "build_reference_mode":"4bit" if USE_4BIT_BASELINE else "8bit",
+    "reference_scope":"original_baseline",
+    "pending_policy":"leave_in_base_8bit",
+}
 (ARTIFACT_DIR/"spec.json").write_text(json.dumps(spec,indent=2,default=str),"utf-8")
 torch.save(exports, ARTIFACT_DIR/"quantized_modules.pt")
 
-loader_source = '''"""Loader NANO-v3.0 BIT-PACKED"""
-import json, torch, torch.nn as nn
+loader_source = '''"""Loader NANO-v3.1 BIT-PACKED"""
+import os, json, torch, torch.nn as nn
 from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -297,8 +345,8 @@ class TrueQuantLinear(nn.Module):
     def forward(s, x):
         d, dt = x.device, x.dtype; f = x.to(torch.float16).reshape(-1, x.shape[-1])
         o = torch.zeros(f.shape[0], s.out_features, dtype=torch.float16, device=d)
-        if s.pq.shape[0] > 0: o.index_copy_(1, s.pi.to(d), f @ (s.pq.to(d,torch.float16)*s.ps.to(d).unsqueeze(1)).t())
-        if s.dq.shape[0] > 0: o.index_copy_(1, s.di.to(d), f @ (s.dq.to(d,torch.float16)*s.ds.to(d).unsqueeze(1)).t())
+        if s.pq.shape[0] > 0: o.index_copy_(-1, s.pi.to(d), f @ (s.pq.to(d,torch.float16)*s.ps.to(d).unsqueeze(1)).t())
+        if s.dq.shape[0] > 0: o.index_copy_(-1, s.di.to(d), f @ (s.dq.to(d,torch.float16)*s.ds.to(d).unsqueeze(1)).t())
         if s.bias is not None: o = o + s.bias.to(d)
         return o.reshape(*x.shape[:-1], s.out_features).to(dt)
 
@@ -311,8 +359,12 @@ def _set(r, n, v):
 def load_artifact(ad):
     d = Path(ad); sp = json.loads((d/"spec.json").read_text("utf-8"))
     st = torch.load(d/"quantized_modules.pt", map_location="cpu")
+    use_4bit = os.getenv("NANO_LOAD_4BIT", "0").strip().lower() in {"1", "true", "yes", "on"}
+    qcfg = BitsAndBytesConfig(
+        load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16
+    ) if use_4bit else BitsAndBytesConfig(load_in_8bit=True)
     m = AutoModelForCausalLM.from_pretrained(sp["base_model_id"],
-        quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map={"": "cuda:0"})
+        quantization_config=qcfg, device_map={"": "cuda:0"})
     t = AutoTokenizer.from_pretrained(sp["base_model_id"], use_fast=True)
     if t.pad_token_id is None: t.pad_token = t.eos_token
     for n, s in st.items():
@@ -341,3 +393,4 @@ set_status("all", "done")
 print(f"\nDONE — {len(locked)} compressi, {len(pending)} 8bit, {elapsed/60:.1f}min")
 print(f"Artifact: {ARTIFACT_DIR}")
 print(f"ZIP File: {ARTIFACT_DIR}.zip")
+

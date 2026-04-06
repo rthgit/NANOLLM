@@ -1,66 +1,58 @@
 ---
 language:
-- en
-- zh
-- it
+  - en
+  - zh
+  - it
 license: other
-library_name: transformers
 tags:
-- quantization
-- sub-bit
-- qwen
-- logic-preserving
-datasets:
-- custom
-metrics:
-- cosine_similarity
+  - quantization
+  - qwen
+  - qwen2.5
+  - mixed-precision
+  - inference
+library_name: transformers
+pipeline_tag: text-generation
 ---
 
-# NanoLLM Qwen V3.0 — Sub-Bit Logic-Preserving Weights
+# NanoLLM Qwen v3.1
 
-**NanoLLM V3.0** represents a breakthrough in LLM compression, specifically engineered for the **Qwen-2.5** family. Unlike traditional quantization methods that sacrifice reasoning capabilities for size, NanoLLM uses a **Next-Token Geometry Laser** to ensure that the model's decision-making pathways remain mathematically consistent with the original FP16 weights.
+NanoLLM v3.1 artifacts are compact overlay artifacts for Qwen2.5 models. The loader starts from the base model in bitsandbytes 8-bit mode, then replaces the modules that passed the NanoLLM cascade with `TrueQuantLinear` modules.
 
-## 🚀 Key Advantages
+## Validated Artifacts
 
-- **Hyper-Compressed**: Qwen 14B reduced to **~5.9 GB** (from 28 GB). Qwen 7B to **~4.0 GB**. Qwen 3B to **~1.9 GB**.
-- **Reasoning-Safe**: Guaranteed **≥ 0.990 Cosine Similarity** (14B achieved **0.998**). No "lobotomization."
-- **Zero-Overhead Inference**: Native PyTorch Bit-Packing architecture. No complex dequantization kernels required.
-- **Auditable Quality**: 0% Semantic Fail rate on complex logic, math, and coding benchmarks.
+| Model | Artifact | Zip size | Gate | Avg cosine | Min cosine | Locked / 8-bit pending |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| Qwen2.5-3B-Instruct | `final_artifact_3B.zip` | 799,189,680 bytes | PASS | 0.990625 | 0.984375 | 143 / 109 |
+| Qwen2.5-7B-Instruct | `final_artifact_7B.zip` | 891,419,698 bytes | PASS | 0.990625 | 0.98046875 | 66 / 130 |
+| Qwen2.5-14B-Instruct | `final_artifact_Qwen2.5-14B-Instruct_pruned_pass.zip` | 1,482,019,132 bytes | PASS | 0.990625 | 0.98046875 | 76 / 260 |
 
-## 📁 Artifacts Included
+The current release gate checks average next-token-logit cosine similarity against the 8-bit reference: `avg >= 0.99`. Minimum cosine is reported as a diagnostic.
 
-This repository contains three optimized production candidates:
-1. `final_artifact_Qwen2.5-14B-Instruct.zip`: Fully-packed weights for Qwen-2.5-14B (48 Layers).
-2. `final_artifact_7B.zip`: Fully-packed weights for Qwen-2.5-7B (28 Layers).
-3. `final_artifact_3B.zip`: Fully-packed weights for Qwen-2.5-3B (36 Layers).
-
-## ⚡ How to Run Inference
-
-To use these weights, download the `.zip` artifacts and use the provided `load_artifact.py` script.
+## Quick Start
 
 ```python
 from load_artifact import load_artifact
 
-# Path to the unzipped directory
-model, tokenizer, metadata = load_artifact("final_artifact_7B")
-
-# Standard Transformers inference
-prompt = "Explain the importance of logic-preserving quantization."
+model, tokenizer, spec = load_artifact("final_artifact_Qwen2.5-14B-Instruct")
+prompt = "Write a Python function to sort a list using bubble sort."
 inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
-outputs = model.generate(**inputs, max_new_tokens=100)
+outputs = model.generate(**inputs, max_new_tokens=160, do_sample=False)
 print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 ```
 
-## 🔬 Mathematical Foundation
+Requirements:
 
-NANO V3.0 employs a **Sub-Bit Algorithmic Cascade**:
-- **8-bit Shield**: Protects the core statistical "golden rows" of the network.
-- **Dynamic 2/4/6-bit Mapping**: Optimizes MLP and Attention projections based on a next-token sensitivity analysis.
-- **Bitwise Pack Engine**: Efficiently stores weights in `uint8` containers, bypassing the memory overhead of float-padding.
+```bash
+pip install torch transformers accelerate bitsandbytes safetensors
+```
 
-## ⚖️ Licensing
+## Runtime Notes
 
-- **Non-Commercial**: Free for academic, personal, and research use.
-- **Commercial**: Requires a separate enterprise license. 
+- `build_reference_mode`: `8bit`
+- `reference_scope`: `original_baseline`
+- `pending_policy`: `leave_in_base_8bit`
+- `NANO_LOAD_4BIT=1` can be used experimentally to load the base model in 4-bit, but the release tests use 8-bit.
 
-Visit the [GitHub Repository](https://github.com/rthgit/NANOLLM) for the full roadmap and technical documentation.
+## License
+
+The NanoLLM quantization pipeline is proprietary/internal. Generated artifacts are published for research and evaluation subject to the repository license terms.

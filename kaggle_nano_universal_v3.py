@@ -1,5 +1,5 @@
 # ============================================================
-# NANO UNIVERSAL CASCADE RUNNER v3.0 — MULTI-GPU AUTO-SCALING
+# NANO UNIVERSAL CASCADE RUNNER v3.1 - MULTI-GPU STABILIZED
 # ============================================================
 import gc
 import json
@@ -14,8 +14,18 @@ from typing import Any, Dict, List, Tuple
 # ===== CONFIG =====
 # Inserisci qualsiasi modello Qwen o Llama (es: 14B, 32B, 72B, 110B)
 MODEL_ID    = os.getenv("MODEL_ID", "Qwen/Qwen2.5-14B-Instruct")
-HF_TOKEN    = os.getenv("HF_TOKEN", "")
-FORCE_CLEAN = True
+HF_TOKEN    = (
+    os.getenv("HF_TOKEN")
+    or os.getenv("HUGGINGFACE_HUB_TOKEN")
+    or os.getenv("HUGGING_FACE_HUB_TOKEN")
+    or ""
+).strip()
+FORCE_CLEAN = os.getenv("NANO_FORCE_CLEAN", "1").strip().lower() in {"1", "true", "yes", "on"}
+USE_4BIT_BASELINE = os.getenv("NANO_BASELINE_4BIT", "1").strip().lower() in {"1", "true", "yes", "on"}
+HF_MAX_WORKERS = int(os.getenv("NANO_HF_MAX_WORKERS", "8"))
+
+if HF_TOKEN and not os.getenv("HF_TOKEN"):
+    os.environ["HF_TOKEN"] = HF_TOKEN
 
 RUN_SUFFIXES = [
     "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj",
@@ -28,7 +38,6 @@ TRIAL_PLAN: List[Tuple[int, int]] = [
     (2,  512), (2, 1024), (2, 2048), (2, 4096), (2, 8192),
     (4,  512), (4, 1024), (4, 2048), (4, 4096), (4, 8192),
     (6,  512), (6, 1024), (6, 2048), (6, 4096), (6, 8192),
-    (8, 0),      # fallback
 ]
 
 PROMPTS = [
@@ -55,7 +64,8 @@ LOCKS_FILE   = Path("/kaggle/working/nano_locks.json")
 
 os.environ["HF_HOME"]                   = str(HF_CACHE)
 os.environ["TRANSFORMERS_CACHE"]        = str(HF_CACHE)
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = os.getenv("NANO_HF_TRANSFER", "0")
+os.environ["HF_HUB_DISABLE_XET"] = os.getenv("NANO_HF_DISABLE_XET", "1")
 os.environ.setdefault("PYTORCH_ALLOC_CONF", "expandable_segments:True")
 os.environ["TOKENIZERS_PARALLELISM"]    = "false"
 
@@ -74,6 +84,15 @@ def set_status(step, state, extra=None):
     p = {"ts_utc": int(time.time()), "step": step, "state": state, "extra": extra or {}}
     STATUS_FILE.write_text(json.dumps(p, indent=2), encoding="utf-8")
     print(f"[{time.strftime('%H:%M:%S')}] {step} -> {state}", flush=True)
+
+def clear_runtime_memory():
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        try:
+            torch.cuda.ipc_collect()
+        except Exception:
+            pass
 
 def get_module(root, name):
     cur = root
@@ -120,14 +139,15 @@ class TrueQuantLinear(nn.Module):
         else: self.bias = None
 
     def forward(self, x):
+        # Flatten [batch, seq, hidden] to [batch*seq, hidden] and write along feature axis.
         d, dt = x.device, x.dtype; f = x.to(torch.float16).reshape(-1, x.shape[-1])
         o = torch.zeros(f.shape[0], self.out_features, dtype=torch.float16, device=d)
         if self.prot_q.shape[0] > 0:
             w = self.prot_q.to(torch.float16) * self.prot_scale.unsqueeze(1)
-            o.index_copy_(1, self.prot_idx, f @ w.t()); del w
+            o.index_copy_(-1, self.prot_idx, f @ w.t()); del w
         if self.deg_q.shape[0] > 0:
             w = self.deg_q.to(torch.float16) * self.deg_scale.unsqueeze(1)
-            o.index_copy_(1, self.deg_idx, f @ w.t()); del w
+            o.index_copy_(-1, self.deg_idx, f @ w.t()); del w
         if self.bias is not None: o = o + self.bias
         return o.reshape(*x.shape[:-1], self.out_features).to(dt)
 
@@ -191,9 +211,23 @@ def build_candidate(model, mn, bits, prot_rows):
         deg_q=deg_q, deg_scale=deg_s, deg_idx=order[:n_deg],
         out_features=total, bias=bias, bits=bits, device=str(dev))
 
+def get_model_input_device(model):
+    dm = getattr(model, "hf_device_map", None)
+    if isinstance(dm, dict):
+        for target in dm.values():
+            if isinstance(target, torch.device):
+                return target
+            if isinstance(target, int):
+                return torch.device(f"cuda:{target}")
+            if isinstance(target, str) and target.startswith("cuda"):
+                return torch.device(target)
+        if "cpu" in dm.values():
+            return torch.device("cpu")
+    return next(model.parameters()).device
+
 @torch.inference_mode()
 def get_logits(model, prompt, tokenizer):
-    dev = next(model.parameters()).device
+    dev = get_model_input_device(model)
     enc = {k: v.to(dev) for k, v in tokenizer(prompt, return_tensors="pt", truncation=True, max_length=MAX_LENGTH).items()}
     return model(**enc).logits[0, -1, :].clone()
 
@@ -201,7 +235,8 @@ def get_logits(model, prompt, tokenizer):
 def evaluate(model, tokenizer, baseline):
     cos_sum = 0.0
     for p in PROMPTS:
-        sig, base = get_logits(model, p, tokenizer), baseline[p]
+        sig = get_logits(model, p, tokenizer)
+        base = baseline[p].to(sig.device, non_blocking=True)
         cos = torch.nn.functional.cosine_similarity(sig.flatten(), base.flatten(), dim=0).item()
         cos_sum += cos
     
@@ -218,26 +253,43 @@ if torch.cuda.is_available():
     print("GPUs Detected:", flush=True)
     subprocess.run(["nvidia-smi", "--query-gpu=index,name,memory.total", "--format=csv"])
 
-if HF_TOKEN: login(token=HF_TOKEN, add_to_git_credential=False)
+if HF_TOKEN:
+    print("[HF] Authenticated download enabled.", flush=True)
+    login(token=HF_TOKEN, add_to_git_credential=False)
+else:
+    print("[HF] WARNING: missing HF token; downloads may be throttled.", flush=True)
 MODEL_CACHE.mkdir(parents=True, exist_ok=True)
-snapshot_download(repo_id=MODEL_ID, local_dir=str(MODEL_CACHE), local_dir_use_symlinks=False,
+snapshot_download(repo_id=MODEL_ID, local_dir=str(MODEL_CACHE), token=(HF_TOKEN or None),
     allow_patterns=["*.json","*.txt","*.model","tokenizer*","special_tokens_map.json",
-                    "generation_config.json","model*.safetensors","model.safetensors.index.json"])
+                    "generation_config.json","model*.safetensors","model.safetensors.index.json"],
+    max_workers=HF_MAX_WORKERS)
 idx_path = MODEL_CACHE / "model.safetensors.index.json"
 tensor_to_file = json.loads(idx_path.read_text("utf-8"))["weight_map"]
 
 tokenizer = AutoTokenizer.from_pretrained(str(MODEL_CACHE), use_fast=True)
 if tokenizer.pad_token_id is None: tokenizer.pad_token = tokenizer.eos_token
 
-# USE AUTO DEVICE MAP FOR MULTI-GPU (Optimized for 32B Sweet Spot)
-model = AutoModelForCausalLM.from_pretrained(str(MODEL_CACHE),
-    quantization_config=BitsAndBytesConfig(
+# USE AUTO DEVICE MAP FOR MULTI-GPU (VRAM-hardened)
+if USE_4BIT_BASELINE:
+    quant_cfg = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.float16,
+    )
+else:
+    quant_cfg = BitsAndBytesConfig(
         load_in_8bit=True,
-        llm_int8_enable_fp32_cpu_offload=True
-    ), 
+        llm_int8_enable_fp32_cpu_offload=True,
+    )
+
+model = AutoModelForCausalLM.from_pretrained(
+    str(MODEL_CACHE),
+    quantization_config=quant_cfg,
     device_map="auto",
-    low_cpu_mem_usage=True
+    low_cpu_mem_usage=True,
 ).eval()
+print(f"[{MODEL_ID}] Base load mode: {'4-bit NF4' if USE_4BIT_BASELINE else '8-bit INT8'}", flush=True)
 
 # DYNAMIC LAYER DISCOVERY
 num_layers = model.config.num_hidden_layers
@@ -248,6 +300,7 @@ print(f"[{MODEL_ID}] Detected {num_layers} hidden layers.")
 set_status("baseline", "running")
 baseline = {p: get_logits(model, p, tokenizer).cpu() for p in PROMPTS} # Move to CPU to free VRAM
 set_status("baseline", "done")
+clear_runtime_memory()
 
 targets = discover_targets(model, RUN_SUFFIXES, LAYER_START, LAYER_END)
 locked, exports, pending = {}, {}, list(targets)
@@ -265,10 +318,7 @@ for ti, (bits, prot) in enumerate(TRIAL_PLAN, 1):
         try:
             c = build_candidate(model, mn, bits, prot)
             set_module(model, mn, c)
-            # Reconstruct baseline dict on target device dynamically
-            val_base = {p: baseline[p].to(next(model.parameters()).device) for p in PROMPTS}
-            ok, m = evaluate(model, tokenizer, val_base)
-            del val_base
+            ok, m = evaluate(model, tokenizer, baseline)
         except Exception as e:
             ok, m = False, {"cos":0.0}
             print(f"  ERROR: {str(e)[:120]}", flush=True)
@@ -276,14 +326,17 @@ for ti, (bits, prot) in enumerate(TRIAL_PLAN, 1):
         if ok:
             locked[mn] = {"trial":ti,"bits":bits,"keep":prot,**m}
             exports[mn] = c.export_state()
-            baseline = {p: get_logits(model, p, tokenizer).cpu() for p in PROMPTS}
+            # Keep the original reference fixed; updating it lets drift compound across locks.
+            clear_runtime_memory()
             print(f"  ✓ {m['cos']*100:.2f}%", flush=True)
         else:
             set_module(model, mn, backup)
             still.append(mn)
             print(f"  ✗ {m.get('cos',0)*100:.2f}%", flush=True)
             
-        clear_cache(mn); del backup; gc.collect(); torch.cuda.empty_cache()
+        clear_cache(mn)
+        del backup
+        clear_runtime_memory()
     pending = still
     LOCKS_FILE.write_text(json.dumps(locked, indent=2, default=str), "utf-8")
 
@@ -291,13 +344,22 @@ elapsed = time.time() - t0
 set_status("cascade", "done", {"locked":len(locked),"pending":len(pending),"sec":int(elapsed)})
 
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-spec = {"format":"nano-v3.0-multi","base_model_id":MODEL_ID,"hidden_layers":num_layers,"locked_count":len(locked),
-        "pending_8bit":len(pending),"elapsed_seconds":int(elapsed)}
+spec = {
+    "format":"nano-v3.1-multi",
+    "base_model_id":MODEL_ID,
+    "hidden_layers":num_layers,
+    "locked_count":len(locked),
+    "pending_8bit":len(pending),
+    "elapsed_seconds":int(elapsed),
+    "build_reference_mode":"4bit" if USE_4BIT_BASELINE else "8bit",
+    "reference_scope":"original_baseline",
+    "pending_policy":"leave_in_base_8bit",
+}
 (ARTIFACT_DIR/"spec.json").write_text(json.dumps(spec,indent=2,default=str),"utf-8")
 torch.save(exports, ARTIFACT_DIR/"quantized_modules.pt")
 
-loader_source = '''"""Loader NANO-v3.0 UNIVERSAL"""
-import json, torch, torch.nn as nn
+loader_source = '''"""Loader NANO-v3.1 UNIVERSAL"""
+import os, json, torch, torch.nn as nn
 from pathlib import Path
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -312,9 +374,9 @@ class TrueQuantLinear(nn.Module):
     def forward(s, x):
         d, dt = x.device, x.dtype; f = x.to(torch.float16).reshape(-1, x.shape[-1])
         o = torch.zeros(f.shape[0], s.out_features, dtype=torch.float16, device=d)
-        if s.pq.shape[0] > 0: o.index_copy_(1, s.pi, f @ (s.pq.to(torch.float16)*s.ps.unsqueeze(1)).t())
-        if s.dq.shape[0] > 0: o.index_copy_(1, s.di, f @ (s.dq.to(torch.float16)*s.ds.unsqueeze(1)).t())
-        if s.bias is not None: o = o + s.bias
+        if s.pq.shape[0] > 0: o.index_copy_(-1, s.pi.to(d), f @ (s.pq.to(d, torch.float16)*s.ps.to(d).unsqueeze(1)).t())
+        if s.dq.shape[0] > 0: o.index_copy_(-1, s.di.to(d), f @ (s.dq.to(d, torch.float16)*s.ds.to(d).unsqueeze(1)).t())
+        if s.bias is not None: o = o + s.bias.to(d)
         return o.reshape(*x.shape[:-1], s.out_features).to(dt)
 
 def _set(r, n, v):
@@ -331,8 +393,12 @@ def get_module(root, name):
 def load_artifact(ad):
     d = Path(ad); sp = json.loads((d/"spec.json").read_text("utf-8"))
     st = torch.load(d/"quantized_modules.pt", map_location="cpu")
+    use_4bit = os.getenv("NANO_LOAD_4BIT", "0").strip().lower() in {"1", "true", "yes", "on"}
+    qcfg = BitsAndBytesConfig(
+        load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16
+    ) if use_4bit else BitsAndBytesConfig(load_in_8bit=True)
     m = AutoModelForCausalLM.from_pretrained(sp["base_model_id"],
-        quantization_config=BitsAndBytesConfig(load_in_8bit=True), device_map="auto")
+        quantization_config=qcfg, device_map="auto")
     t = AutoTokenizer.from_pretrained(sp["base_model_id"], use_fast=True)
     if t.pad_token_id is None: t.pad_token = t.eos_token
     for n, s in st.items():

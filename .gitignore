@@ -1,0 +1,36 @@
+# Python/runtime noise
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Secrets
+.env
+.env.*
+*token*
+*Token*
+*TOKEN*
+
+# Local experiment outputs
+local_runs/
+downloads/
+results/
+results_phase*/
+hf_release_v31_result.json
+_hf_manifest_*.json
+
+# Model/artifact payloads belong on Hugging Face, not GitHub.
+*.zip
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.gguf
+*.onnx
+*.ckpt
+nano_runpod_bundle_*.zip
+final_artifact_*.zip
+NANOHF/final_artifact*.zip
+
