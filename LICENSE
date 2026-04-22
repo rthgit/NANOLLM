@@ -1,0 +1,17 @@
+# NANOLLM PROPRIETARY RESEARCH LICENSE (v1.0)
+
+Copyright (c) 2026 RthItalia. All rights reserved.
+
+## 1. DEFINITIONS
+"NANOLLM" refers to the Non-Abelian Network Optimization quantization pipeline and associated native inference kernels provided in this repository.
+
+## 2. PERMITTED USE
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the software for non-commercial research and evaluation purposes only.
+
+## 3. RESTRICTIONS
+- **Commercial Use**: Any commercial use, including but not limited to the sale of the software, use in commercial services, or generation of commercial artifacts, is strictly prohibited without prior written consent from RthItalia.
+- **Redistribution**: Redistribution of the source code is permitted only with the inclusion of this license.
+- **Modification**: Modification of the source code for research purposes is permitted, provided that any derivative works based on NANOLLM also include this license.
+
+## 4. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
