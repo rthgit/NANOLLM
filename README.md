@@ -64,7 +64,7 @@ print(tokenizer.decode(out[0]))
 ---
 
 ## 📜 Scientific Paper
-Read the full technical breakdown: [NANO: Topological Density and Emergent Weight Geometry](E:\PromptMaster\NANO_Topological_Density_Paper_v1_Final.md).
+Read the full technical breakdown: [NANO: Topological Density and Emergent Weight Geometry](NANO_SCIENTIFIC_PAPER.md).
 
 ---
 
