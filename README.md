@@ -124,10 +124,12 @@ print(tok.decode(out[0][inp["input_ids"].shape[-1]:], skip_special_tokens=True))
 
 ## License
 
-See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
+See [LICENSE](LICENSE), [NOTICE](NOTICE), and [LICENSING.md](LICENSING.md).
 
 ## Notes
 
 - `trust_remote_code=True` is required for the published compact winner.
-- The shipped compact release should be described as a composite or dual-license distribution: upstream Qwen license plus Nano repository license for the Nano-specific runtime and packaging.
+- The repository is currently documented as a dual-license or dual-layer research distribution.
+- Built with Qwen.
+- Redistributed release folders should carry both `LICENSE` and `NOTICE`.
 - The claims around Radial-Former / native-bit shell remain research-direction material unless separately revalidated as a shipped runtime path.

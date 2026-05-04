@@ -150,14 +150,24 @@ pip install torch transformers accelerate safetensors
 - This release is specifically tuned around `Qwen/Qwen2.5-3B-Instruct`.
 - It should be treated as a compact experimental runtime artifact, not as a drop-in scientific proof of broader architectural claims.
 
-## Dual License Note
+## License Note
 
-This release should be read as a composite or dual-license distribution:
+This release should be described as a dual-license or dual-layer research distribution.
 
-- the upstream base model remains subject to the license terms that apply to `Qwen/Qwen2.5-3B-Instruct`
-- the Nano compact runtime, packaging logic, and release-specific code remain subject to the Nano repository license terms
+Built with Qwen.
 
-For that reason the Hugging Face metadata stays at `license: other` instead of pretending that a single SPDX tag fully describes the release.
+The intended reading is:
+
+- Qwen-derived materials retain the relevant Qwen Research License obligations
+- Nano-specific runtime, packaging, and documentation changes are additional repository-authored research components
+
+For redistributed copies, keep:
+
+- `LICENSE`
+- `NOTICE`
+- clear indication of modified files where applicable
+
+The Hugging Face metadata still stays at `license: other` because this is not accurately described by a single simple SPDX identifier.
 
 ## Provenance
 

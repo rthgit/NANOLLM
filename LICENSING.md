@@ -1,41 +1,56 @@
 # Licensing Structure
 
-This repository currently mixes two legal layers that should not be collapsed into a single simplified claim.
+The current intended public position is a dual-license or dual-layer research distribution.
 
-## Layer 1: Upstream Base Models
+That means:
 
-When a release is derived from an upstream model such as `Qwen/Qwen2.5-3B-Instruct`, the upstream model keeps its own license terms.
+1. one layer for Qwen-derived materials
+2. one layer for Nano-specific code and packaging
 
-That applies to:
+## Layer 1: Qwen-Derived Materials
 
-- the original pretrained weights
-- any obligations attached to the upstream model family
-- any usage restrictions or attribution requirements defined by the upstream publisher
+If a release package contains materials derived from Qwen, those parts keep the Qwen Research License obligations.
 
-## Layer 2: Nano Code and Release Packaging
+Practically, that means:
 
-The Nano-specific code in this repository remains governed by the Nano repository license:
+- non-commercial research and evaluation use
+- upstream attribution retained
+- modified files clearly identified where applicable
+- no silent relicensing of Qwen-derived artifacts as if they were purely Nano-owned
 
-- exporter code
+## Layer 2: Nano-Specific Code and Packaging
+
+The Nano-specific additions authored for this repository are distributed under the Nano research-only layer described in [`LICENSE`](./LICENSE).
+
+That layer covers:
+
+- exporter scripts
 - runtime loader code
-- packing logic
-- release-specific scripts
-- release packaging and integration logic
-
-Today that license is defined in [`LICENSE`](./LICENSE).
-
-## Practical Rule
-
-For public documentation, model cards, and release notes:
-
-- do not present the release as if a single SPDX identifier fully describes it
-- do describe the distribution as composite or dual-license in plain language
-- do keep the upstream model license and the Nano repository license conceptually separate
+- packaging logic
+- benchmarking helpers
+- release-specific documentation
 
 ## Hugging Face Metadata
 
-Because Hugging Face front matter expects a single `license:` value, the safe metadata choice for the current Nano compact release docs is:
+Hugging Face front matter expects a single `license:` field, but this project is not described accurately by a single permissive SPDX identifier.
+
+So the safe metadata choice remains:
 
 - `license: other`
 
-The human-readable body should then explain the composite or dual-license structure explicitly.
+The human-readable body should then explain the dual-license structure explicitly.
+
+## Release Packaging Rule
+
+For any public compact release package, include:
+
+- `LICENSE`
+- `NOTICE`
+
+## Documentation Rule
+
+The public-facing text should say:
+
+- the release is dual-license or dual-layer
+- it is built with Qwen
+- Nano-specific runtime and packaging changes are additional repository-authored components

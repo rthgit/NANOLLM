@@ -35,6 +35,12 @@ def copy_support_files(base_dir: Path, out_dir: Path) -> None:
             continue
         shutil.copy2(item, out_dir / item.name)
 
+    repo_dir = Path(__file__).resolve().parent.parent
+    for extra_name in ("LICENSE", "NOTICE"):
+        extra = repo_dir / extra_name
+        if extra.exists():
+            shutil.copy2(extra, out_dir / extra_name)
+
 
 def load_base_tensor(base_dir: Path, key: str):
     index_path = base_dir / "model.safetensors.index.json"

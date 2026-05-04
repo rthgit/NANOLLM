@@ -53,4 +53,8 @@ Published winner:
 
 ## License
 
-This directory should be read together with [`../LICENSING.md`](../LICENSING.md).
+This directory should be read together with:
+
+- [`../LICENSE`](../LICENSE)
+- [`../NOTICE`](../NOTICE)
+- [`../LICENSING.md`](../LICENSING.md)

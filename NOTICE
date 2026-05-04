@@ -1,0 +1,7 @@
+Built with Qwen.
+
+Qwen is licensed under the Qwen RESEARCH LICENSE AGREEMENT, Copyright (c) Alibaba Cloud. All Rights Reserved.
+
+Nano-specific exporter, runtime, packaging, and documentation changes in this repository are authored for the Nano compact release workflow by RthItalia.
+
+Redistributed release folders should keep both `LICENSE` and `NOTICE`.

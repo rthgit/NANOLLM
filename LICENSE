@@ -1,17 +1,98 @@
-# NANOLLM PROPRIETARY RESEARCH LICENSE (v1.0)
+NANOLLM DUAL RESEARCH LICENSE
 
-Copyright (c) 2026 RthItalia. All rights reserved.
+Version 1.0
+Effective date: 2026-05-04
 
-## 1. DEFINITIONS
-"NANOLLM" refers to the Non-Abelian Network Optimization quantization pipeline and associated native inference kernels provided in this repository.
+This repository and related release packages contain two distinct legal layers:
 
-## 2. PERMITTED USE
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the software for non-commercial research and evaluation purposes only.
+1. Qwen-derived materials and obligations
+2. Nano-specific code, packaging, and documentation by RthItalia
 
-## 3. RESTRICTIONS
-- **Commercial Use**: Any commercial use, including but not limited to the sale of the software, use in commercial services, or generation of commercial artifacts, is strictly prohibited without prior written consent from RthItalia.
-- **Redistribution**: Redistribution of the source code is permitted only with the inclusion of this license.
-- **Modification**: Modification of the source code for research purposes is permitted, provided that any derivative works based on NANOLLM also include this license.
+By using, copying, modifying, or redistributing any part of this repository or any release package produced from it, you agree to the terms below.
 
-## 4. NO WARRANTY
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+## 1. Scope
+
+This license applies to:
+
+- repository source code
+- exporter and runtime code
+- release packaging logic
+- documentation and model cards
+- self-contained compact exports and related release folders produced by this repository
+
+This repository may also include or produce materials derived from upstream Qwen models. Those derived materials remain subject to the upstream Qwen Research License obligations described below.
+
+## 2. Upstream Qwen-Derived Materials
+
+Any of the following, when derived from `Qwen/Qwen2.5-*` or other Qwen materials, remain subject to the Qwen Research License Agreement:
+
+- derivative weights
+- compact exported checkpoints
+- tokenizer assets distributed with a Qwen-derived release
+- documentation or release packages describing or carrying such derived artifacts
+
+For those Qwen-derived materials:
+
+- non-commercial research and evaluation use only
+- commercial use requires the appropriate upstream license
+- required upstream attribution must be preserved
+- modified files must be clearly identified where applicable
+
+The required upstream attribution is preserved in the accompanying `NOTICE` file.
+
+## 3. Nano-Specific Additions by RthItalia
+
+Unless a file explicitly says otherwise, the Nano-specific additions in this repository are provided by RthItalia for non-commercial research and evaluation purposes only.
+
+These Nano-specific additions include:
+
+- exporter code
+- runtime loader code
+- compact packaging logic
+- benchmarking helpers
+- release scripts
+- repository documentation specific to the Nano compact workflow
+
+Commercial use of these Nano-specific additions requires prior written permission from RthItalia.
+
+## 4. Redistribution Conditions
+
+If you redistribute this repository, a derivative work of it, or a release package produced from it, you must:
+
+- include this `LICENSE` file
+- include the `NOTICE` file
+- preserve upstream Qwen attribution where applicable
+- prominently mark modified files where applicable
+- not represent the package as being under a single permissive SPDX-style license if it is not
+
+## 5. Ownership
+
+- Upstream Qwen materials remain the property of their respective upstream rights holders under their applicable license terms.
+- Nano-specific code and documentation authored for this repository remain the property of RthItalia.
+- Your own modifications remain yours, subject to the upstream and Nano-layer restrictions that apply to the materials you modify or redistribute.
+
+## 6. Conflict Rule
+
+If a distributed artifact contains both:
+
+- Qwen-derived materials
+- Nano-specific code or packaging
+
+then both layers apply together, and the stricter applicable restriction governs that part of the distribution.
+
+## 7. Warranty Disclaimer
+
+THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+## 8. Limitation of Liability
+
+IN NO EVENT SHALL THE AUTHORS, COPYRIGHT HOLDERS, OR CONTRIBUTORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
+
+## 9. Practical Reading
+
+This is a dual-layer research license structure:
+
+- upstream Qwen-derived release materials follow the Qwen Research License obligations
+- Nano-specific code and packaging remain under the Nano research-only terms stated here
+
+For public release folders and Hugging Face distributions, keep both `LICENSE` and `NOTICE`.

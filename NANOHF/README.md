@@ -89,14 +89,21 @@ print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 
 ## License
 
-Treat the current public release story as a composite or dual-license setup:
+The current release documentation should be read as dual-license or dual-layer:
 
-- the upstream Qwen base model keeps its own license terms
-- the Nano quantization pipeline and release-specific runtime code keep the Nano repository license terms
+- Qwen-derived materials retain the Qwen Research License obligations
+- Nano-specific runtime and packaging changes are additional repository-authored research components
 
-Do not collapse those two layers into a single license claim unless the repository legal text is rewritten accordingly.
+Built with Qwen.
+
+For distributed release folders, keep:
+
+- `LICENSE`
+- `NOTICE`
+- clear notice of modified files where applicable
 
 See also:
 
 - `../LICENSE`
+- `../NOTICE`
 - `../LICENSING.md`
