@@ -1,76 +1,133 @@
-# 🌌 NANO: Non-Abelian Network Optimization
-### *Topological Density over Numerical Precision*
+# NANO / NanoLLM
 
-[![Version](https://img.shields.io/badge/Version-3.1--STABLE-blueviolet?style=for-the-badge)](https://huggingface.co/RthItalia)
-[![License](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)](LICENSE)
-[![NANO-Native](https://img.shields.io/badge/Inference-NANO--Native-teal?style=for-the-badge)](E:\NANO\nano_native_inference_v4_golden.py)
+Repository status: transitional.
 
-**NANO** is a unified framework for extreme LLM compression (75%+) that rejects the "Precision Illusion" of standard 16-bit deployment. By treating neural networks as topologically dense manifolds rather than absolute numerical sets, NANO enables billion-parameter models to run on commodity hardware with minimal RAM signatures.
+This repository currently mixes:
 
----
+- historical research directions
+- legacy overlay-artifact release scripts
+- the newer validated compact self-contained `3B` winner
 
-## 🚀 Key Innovations
+The important point is this:
 
-### 🧠 CDR: Conceptual Density Reduction
-NANO identifies the "Informational Ballast" within weights using **Norm Divergence**. Instead of uniform quantization, we vary bit-depth (8, 6, 4, 2) dynamically, physically pruning zero-entropy parameters.
+- the validated released winner is **not** the old overlay zip path
+- the validated released winner is **`RthItalia/nano_compact_3b_qkvfp16`**
 
-### 🌐 Radial-Former: Geometric Encoding
-We replace massive (1GB+) categorical embedding tables with **Phi-based Sinusoidal Geometry**. Token IDs are decomposed into 18-bit descriptors, mapped into a 12-dimensional continuous hidden space.
+## What Was Actually Validated
 
-### ⚡ Native Bit-Logic Shell
-The **NANO Direct Shell** executes matmul operations directly on bit-packed `uint8` buffers.
-- **JIT Unpacking**: Weights stay packed until the moment of computation in L3 cache.
-- **Thermal Shields**: High-energy normalization stabilized via FP32 RMSNorm patches.
+Validated compact winner:
 
----
+- base model: `Qwen/Qwen2.5-3B-Instruct`
+- policy:
+  - `q_proj`, `k_proj`, `v_proj` in `fp16`
+  - `o_proj` and most of the body in Nano compact format
+  - quantized single-copy embeddings
+  - tied custom output head over the quantized embeddings
 
-## 📊 Performance Benchmarks (v3.1)
+Measured envelope:
 
-| Model Target | Baseline Size | NANO Size (Zip) | RAM Signature | Fidelity (Cosine) |
-| :--- | :--- | :--- | :--- | :--- |
-| **Qwen-2.5-3B** | 12.0 GB | **799 MB** | 2.4 GB | 0.9906 |
-| **Qwen-2.5-7B** | 15.0 GB | **891 MB** | 4.1 GB | 0.9906 |
-| **Qwen-2.5-14B** | 28.0 GB | **1.48 GB** | 7.5 GB | 0.9884 |
+- model size: about `2.3432 GB`
+- allocated after load: about `2.3432 GB`
+- peak generate VRAM: about `2.44 GB`
 
----
+True `8bit` baseline used for comparison:
 
-## 🛠️ Quick Start
+- allocated after load: `3.1703 GB`
+- peak generate VRAM: about `3.21 GB`
 
-### 1. Requirements
-```bash
-pip install torch transformers accelerate bitsandbytes safetensors
-```
+Published model:
 
-### 2. Native Inference Entrypoint
-Use the **Golden Shell** for the most efficient execution:
+- `https://huggingface.co/RthItalia/nano_compact_3b_qkvfp16`
+
+## What This Repo Contains Today
+
+- root docs and historical notes
+- `NANOHF/`
+  - release docs for both legacy overlay artifacts and the current self-contained winner
+- `nano_compact_canonical/`
+  - canonical minimal exporter/runtime tree for the validated `qkvfp16` winner
+- `nano_native_inference.py`
+  - research/native-shell direction
+- `release_hf_v31.py`
+  - legacy artifact release script
+
+## What Is Legacy vs Current
+
+### Current validated path
+
+Use the self-contained compact model:
+
+- `RthItalia/nano_compact_3b_qkvfp16`
+
+This is the path that was actually tested end-to-end for:
+
+- size
+- VRAM
+- smoke quality against the true `8bit` baseline
+
+### Legacy path
+
+The old `final_artifact_*.zip` flow is still useful as an intermediate research artifact, but it is not the best final user-facing release path for the validated `3B` winner.
+
+## Canonical Winner Source
+
+The validated `qkvfp16` winner now has a dedicated minimal source tree in:
+
+- `nano_compact_canonical/`
+
+That directory is the cleanest current source-of-truth for:
+
+- final exporter
+- final `modeling_nanollm.py`
+- final smoke test
+- final HF model card
+
+## Recommended Runtime Example
 
 ```python
-from nano_native_inference_v4_golden import patch_nano_model
-from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
-# 1. Load the lightweight base shell
-tokenizer = AutoTokenizer.from_pretrained("RthItalia/NanoLLM-Qwen2.5-7B-v3.1")
-model = AutoModelForCausalLM.from_pretrained("RthItalia/NanoLLM-Qwen2.5-7B-v3.1")
+repo_id = "RthItalia/nano_compact_3b_qkvfp16"
 
-# 2. Inject NANO Topological Intelligence
-model = patch_nano_model(model, "path/to/nano_topology.json", "path/to/radial_projection.pt")
+tok = AutoTokenizer.from_pretrained(
+    repo_id,
+    use_fast=True,
+    trust_remote_code=True,
+)
 
-# 3. Generate with Native Bit-Logic
-inputs = tokenizer("The history of computers started with", return_tensors="pt")
-out = model.generate(**inputs, max_new_tokens=50)
-print(tokenizer.decode(out[0]))
+model = AutoModelForCausalLM.from_pretrained(
+    repo_id,
+    trust_remote_code=True,
+    device_map="cuda",
+    dtype=torch.float16,
+).eval()
+
+messages = [
+    {"role": "user", "content": "Explain what a neural network is in exactly 3 simple sentences."}
+]
+text = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+inp = tok(text, return_tensors="pt").to(next(model.parameters()).device)
+
+with torch.no_grad():
+    out = model.generate(
+        **inp,
+        max_new_tokens=120,
+        do_sample=False,
+        repetition_penalty=1.08,
+        eos_token_id=tok.eos_token_id,
+        pad_token_id=tok.eos_token_id,
+    )
+
+print(tok.decode(out[0][inp["input_ids"].shape[-1]:], skip_special_tokens=True))
 ```
 
----
+## License
 
-## 📜 Scientific Paper
-Read the full technical breakdown: [NANO: Topological Density and Emergent Weight Geometry](NANO_SCIENTIFIC_PAPER.md).
+See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
 
----
+## Notes
 
-## 🤝 Project Status
-NANO is currently at **RC1** (Release Candidate 1).  
-Scaling to 70B parameter models is currently in testing.
-
----
-© 2026 RthItalia — *Intelligence doesn't require precision. It requires structure.*
+- `trust_remote_code=True` is required for the published compact winner.
+- The shipped compact release should be described as a composite or dual-license distribution: upstream Qwen license plus Nano repository license for the Nano-specific runtime and packaging.
+- The claims around Radial-Former / native-bit shell remain research-direction material unless separately revalidated as a shipped runtime path.

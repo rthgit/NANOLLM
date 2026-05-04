@@ -1,8 +1,6 @@
 ---
 language:
   - en
-  - zh
-  - it
 license: other
 tags:
   - quantization
@@ -14,11 +12,53 @@ library_name: transformers
 pipeline_tag: text-generation
 ---
 
-# NanoLLM Qwen v3.1
+# NanoLLM Releases
 
-NanoLLM v3.1 artifacts are compact overlay artifacts for Qwen2.5 models. The loader starts from the base model in bitsandbytes 8-bit mode, then replaces the modules that passed the NanoLLM cascade with `TrueQuantLinear` modules.
+This directory documents two different release classes:
 
-## Validated Artifacts
+1. legacy overlay artifacts
+2. the newer self-contained compact winner for `3B`
+
+They are not the same thing and should not be presented as equivalent.
+
+## Recommended Current Release
+
+Recommended public model for `3B`:
+
+- `RthItalia/nano_compact_3b_qkvfp16`
+- canonical card draft in this repo: `NANOHF/HF_MODEL_CARD_qkvfp16.md`
+
+Validated policy:
+
+- `q_proj`, `k_proj`, `v_proj` in `fp16`
+- `o_proj` and most of the body in Nano compact format
+- quantized single-copy embeddings
+- tied custom output head over quantized embeddings
+
+Validated envelope:
+
+- model size: `2.3432 GB`
+- allocated after load: `2.3432 GB`
+- peak generate VRAM: about `2.44 GB`
+
+True `8bit` baseline used for comparison:
+
+- allocated after load: `3.1703 GB`
+- peak generate VRAM: about `3.21 GB`
+
+## Legacy Overlay Artifacts
+
+The files below are legacy intermediate research artifacts:
+
+- `final_artifact_3B.zip`
+- `final_artifact_7B.zip`
+- `final_artifact_Qwen2.5-14B-Instruct_pruned_pass.zip`
+
+Those overlay artifacts require a loader that starts from the base model and then replaces selected modules with `TrueQuantLinear`.
+
+That path is still useful for research and debugging, but it is not the final recommended user-facing release path for the validated `3B` winner.
+
+## Legacy Overlay Validation Snapshot
 
 | Model | Artifact | Zip size | Gate | Avg cosine | Min cosine | Locked / 8-bit pending |
 | --- | --- | ---: | --- | ---: | ---: | ---: |
@@ -26,24 +66,18 @@ NanoLLM v3.1 artifacts are compact overlay artifacts for Qwen2.5 models. The loa
 | Qwen2.5-7B-Instruct | `final_artifact_7B.zip` | 891,419,698 bytes | PASS | 0.990625 | 0.98046875 | 66 / 130 |
 | Qwen2.5-14B-Instruct | `final_artifact_Qwen2.5-14B-Instruct_pruned_pass.zip` | 1,482,019,132 bytes | PASS | 0.990625 | 0.98046875 | 76 / 260 |
 
-The current release gate checks average next-token-logit cosine similarity against the 8-bit reference: `avg >= 0.99`. Minimum cosine is reported as a diagnostic.
+The cosine gate above belongs to the overlay stage, not to the final self-contained compact winner.
 
-## Quick Start
+## Overlay Quick Start
 
 ```python
 from load_artifact import load_artifact
 
-model, tokenizer, spec = load_artifact("final_artifact_Qwen2.5-14B-Instruct")
+model, tokenizer, spec = load_artifact("final_artifact_3B")
 prompt = "Write a Python function to sort a list using bubble sort."
 inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
 outputs = model.generate(**inputs, max_new_tokens=160, do_sample=False)
 print(tokenizer.decode(outputs[0], skip_special_tokens=True))
-```
-
-Requirements:
-
-```bash
-pip install torch transformers accelerate bitsandbytes safetensors
 ```
 
 ## Runtime Notes
@@ -51,8 +85,18 @@ pip install torch transformers accelerate bitsandbytes safetensors
 - `build_reference_mode`: `8bit`
 - `reference_scope`: `original_baseline`
 - `pending_policy`: `leave_in_base_8bit`
-- `NANO_LOAD_4BIT=1` can be used experimentally to load the base model in 4-bit, but the release tests use 8-bit.
+- `NANO_LOAD_4BIT=1` remains experimental for the overlay path
 
 ## License
 
-The NanoLLM quantization pipeline is proprietary/internal. Generated artifacts are published for research and evaluation subject to the repository license terms.
+Treat the current public release story as a composite or dual-license setup:
+
+- the upstream Qwen base model keeps its own license terms
+- the Nano quantization pipeline and release-specific runtime code keep the Nano repository license terms
+
+Do not collapse those two layers into a single license claim unless the repository legal text is rewritten accordingly.
+
+See also:
+
+- `../LICENSE`
+- `../LICENSING.md`
